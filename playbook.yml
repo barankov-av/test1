@@ -1,0 +1,72 @@
+---
+- name: Deploy web application
+  hosts: web
+  become: yes
+
+  vars:
+    server_name: localhost
+
+  tasks:
+    - name: Install necessary packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Install Docker Compose
+      vars:
+        docker_compose_version: "1.29.2"
+        docker_compose_url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
+      get_url:
+        url: "{{ docker_compose_url }}"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Copy Docker Compose file
+      copy:
+        src: docker-compose.yml
+        dest: docker-compose.yml
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy Dockerfiles
+      copy:
+        src: ./app
+        dest: ./
+        owner: root
+        group: root
+        mode: '0755'
+    
+    - name: Generate Nginx configuration file
+      template:
+        src: templates/nginx.conf.j2
+        dest: ./app/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - Restart Nginx
+
+    - name: Start Docker Compose
+      command: docker-compose up -d
+      args:
+        chdir: ./
+  
+  handlers:
+    - name: Restart Nginx
+      command: docker-compose restart nginx
+      args:
+        chdir: ./
+
+  

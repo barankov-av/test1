@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  php:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.php
+    networks:
+      - app-network
+    volumes:
+      - php-data:/var/www/html
+    depends_on:
+      - mysql
+
+  mysql:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.mysql
+    networks:
+      - app-network
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: exampledb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+
+  nginx:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    volumes:
+      - ./app/nginx.conf:/etc/nginx/conf.d/default.conf
+      - php-data:/var/www/html
+    depends_on:
+      - php
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  php-data:
+  mysql_data:
